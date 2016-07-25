@@ -1,0 +1,112 @@
+App的高性能应该是每个程序员追求的，当然也是用户希望的。本篇文章来简单介绍一下App优化的方式
+1、UI优化
+        UI优化主要是提高UI的绘制效率，包括减少UI层次，提高初始化效率等。减少UI的绘制时间，能让UI体验更流畅，特别是低端手机上。
+1.1 layout中ViewGroup的选择
+        这个主要是针对LinearLayout和Relativelayout的选择，LinearLayout的效率比RelativeLayout高，但是在相对复杂的布局下LinearLayout又容易造成比较多的UI层次影响效率。
+                                               
+    如果需要实现上图的layout，是一种很常见的布局形式，应该如何布局的，这里选择两种实现方式：
+ 外层使用一个横向的LinearLayout再包裹一个RelativeLayout 实现     3+x层
+外层使用一个RelativeLayout ，先把Image位置确定，然后使用layout_align*等相对布局属性实现   2+x层
+     以上第二种实现比第一种少了一层，如果是更复杂的布局，可能会出现相差很多层次的情况。因此，在选择ViewGroup的时候尽量选择合适的，简单的布局，使用LinearLayout可能比较合适,复杂的UI布局，建议使用相对布局（RelativeLayout）。
+1.2 使用include+merge
+    include可以实现布局复用，使用很简单。
+<RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:paddingBottom="@dimen/dd_dimen_40px" >
+        <include
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            layout="@layout/include_layout" />
+        ......
+</RelativeLayout>
+    include_layout.xml布局代码：
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content" >
+    <Button
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_alignParentRight="true"
+        android:background="@android:color/transparent" />
+</RelativeLayout>
+    开发过程中include_layout的布局可能会在很多不同的布局里通过include标签很方便的复用，但是有一种“坏味道”是，include可能增加了布局的层次，比如上面的代码。省略其他来看xml代码是3层布局，如果不使用include两层就可以搞定，但是又不想放弃复用。这个时候可以使用merge来帮忙。
+    通过使用merge来修改上面的xml代码，把include_layout.xml修改为：
+<merge xmlns:android="http://schemas.android.com/apk/res/android" >
+    
+    <Button
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_alignParentRight="true"
+        android:background="@android:color/transparent" />
+</merge >
+    在复用的时候，merge中的Button会当做merge的父布局（RelativeLayout）的子布局来绘制了，这样可以减少一层。当然如果merge的父布局是LiearLayout，这样的布局会出问题，所以使用过程需要灵活搭配，选择合适且正确的方式。
+1.3 使用ViewStub延迟加载
+    ViewStub在布局初始化时候是大小为0，不被绘制的View，在需要加载的时候通过java代码初始化它即可。在布局中有许多在一定条件下才展示View，可以使用ViewStub，初始化时减少UI的绘制时间，更快的展示出Activity。ViewStub中的View按需加载即可。
+1.4、自定义View优化
+    自定义View的时候需要自己重写onDraw方法，在onDraow中大量的计算，对象的创建都会对性能产生影响，所以需要最简洁的重写onDraw方法。
+    另一点就是在自定义View的时候，最好只绘制可见部分，被遮挡的部分可以绘制来提高效率。
+1.5、其他
+     把不必要的背景设置为透明(减少过度绘制)。
+2、内存优化
+
+2.1、减少gc
+        java中内存回收不受程序员控制的，在分配内存时内存不够就会gc来回收一部分内存用来完成本次内存分配，gc会阻塞主线程，造成卡顿现象。
+ dalvikvm: GC_FOR_ALLOC freed 573K, 6% free 37579K/39832K, paused 24ms, total 24ms
+        以上gc的log中paused的时间就是垃圾回收阻塞主线程的时间，这里造成了24ms的卡顿。如果频繁的发生gc，用户体验 会很差。如何减少自动gc呢？总结如下：
+避免频繁创建对象
+对象在使用的时候创建
+使用对象池重复使用对象（例如 线程池、Message重复利用、ListView重复使用视图）
+
+2.2、避免内存泄露
+        内存泄露会使得App的可使用内存原来越小，直至出现OOM。因此避免内存泄露可以使程序更流畅，也会很大程度上降低OOM出现的几率。
+
+    2.2.1、内存泄露原因
+        出现内存泄露的原因主要有如下几方面：
+访问资源后未关闭。（流，Cursor等）
+静态变量持有Activity或Service的引用。
+单例对象持有Activity或者Service的引用。
+例：单例类持有Activity或者Service的Context对象、单例类持有Activity的内部类、Activity作为监听对象被单例类注册等。
+永久对象持有Activity或者Service的引用。
+例：Handler作为非静态内部类被Looper持有；ContentResolver注册但未取消注册，EventBus注册但未取消注册等。
+属性动画中的循环动画没有及时取消。
+
+    2.2.2、检测内存泄露
+        内存泄漏可以通过代码或者工具来分析。
+LeakCanary
+         LeakCanary使用很方便，在Application的onCreate方法添加  LeakCanary.install(this);
+public class MyApplication extends Application {
+  @Override 
+  public void onCreate() {
+    super.onCreate();
+    LeakCanary.install(this);
+  }
+}
+当出现内存泄露时，通过下拉通知提醒：
+leaktrace.png 
+Memory Analyzer Tool(MAT)
+    MAT是内存分析工具，可以帮助分析内存泄露。MAT可以打开标准的hprof文件来分析内存的使用情况。
+    首先需要生成hprof文件，这里使用Android Studio中 Monitors中的Dump Java Heap，如下图所示：
+            
+   点击图标会自动执行一段儿时间生成hprof文件，studio会自动打开，这个文件存放在了上图左边的         Captures目录下,选择刚生成的文件右键选择Export to standard .hprof生成一个可以被mat打开的标准      hprof文件。
+        
+    mat打开内存文件:
+    
+ 
+     可以选择Dominator Tree:
+        
+ 第一行可以输入正则来查询有问题的类，然后选择该行右键弹出选择框（下图是网上借来）
+    
+根据引用来分析内存泄露来源。当然这里是MAT的简单使用，“纸上得来终觉浅，绝知此事要躬行”，一定亲自体验以下才行。
+StrickMode
+    StrickMode是系统Api，在debug模式下添加如下代码就可以使用：
+StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder().detectAll().penaltyLog().build());
+StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder().detectAll().penaltyLog().build());
+    StrickMode分别设置了ThreadPolicy和VmPolicy可以在logcat中打印出StrickMode的log警告。包括主线程耗时信息和内存泄露的信息。
+    如何检测一个Activity是否内存泄露呢？第一进入该Activity后退出，然后再次进入退出。如果出现StrickMode的红色警告log,代表有内存泄露（也有没有及时回收的时候，应该多试几次）
+            StrictMode: class com.demo.MainActivity; instances=2; limit=1
+
+3、结束语
+    App优化是一个持续的过程，还可以通过选择合适的数据结构、合适的算法来提高App的性能。
