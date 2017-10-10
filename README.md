@@ -39,10 +39,25 @@ Android部分
 
 Java部分
 -------
+* 集合框架
+  * HashMap
+  * ArrayList
+  * LinkedList
+  * LikedHashMap
+  * Hashtable
+  * Set
+  * ConcurrentHashMap
+* vollate和synchronized
 
 算法部分
 -------
 * [链表反转](http://www.jianshu.com/p/b2e595a518af)
+* 排序算法
+  * 选择排序
+  * 插入排序
+  * 希尔排序
+  * 堆排序
+  * 快速排序
 
 设计模式与架构
 -------
