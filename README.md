@@ -27,7 +27,7 @@ Android部分
   * 手写Binder
 * 源码解析
   * Handler机制
-  * Activity启动过程
+  * [Activity启动过程](http://lruheng.com/2017/03/24/%E4%B8%80%E4%B8%AAAPP%E4%BB%8E%E5%90%AF%E5%8A%A8%E5%88%B0%E4%B8%BB%E9%A1%B5%E9%9D%A2%E6%98%BE%E7%A4%BA%E7%BB%8F%E5%8E%86%E4%BA%86%E5%93%AA%E4%BA%9B%E8%BF%87%E7%A8%8B%EF%BC%9F/)
   * AMS机制
   * PMS机制
   * WMS机制
