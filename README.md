@@ -1,5 +1,6 @@
-#Android基础
-##Activity
+Android基础
+====
+#Activity
 Activity生命周期
 Activity启动模式
 ##Fragment
